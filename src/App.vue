@@ -11,25 +11,36 @@
       <section id="products" class="content-section section-wrap"><div class="section-heading"><div><p class="eyebrow"><span></span> 机械零件产品</p><h2>适配工况的<br><em>可靠零件。</em></h2></div><p>展示常见机械零件类别，具体材质、尺寸与工艺以设备用途、图纸或样件确认结果为准。</p></div><div class="product-grid"><article v-for="(product, index) in products" :key="product.name" class="product-card" :class="{ featured: index === 0 }"><div class="card-top"><span class="product-type">{{ product.type }}</span><span>0{{ index + 1 }}</span></div><div class="mini-product" :class="`mini-product-${index + 1}`"><span>{{ product.code }}</span><i></i><i></i><i></i></div><h3>{{ product.name }}</h3><p>{{ product.description }}</p><div class="card-footer"><div><small>报价方式</small><strong>{{ product.price }}</strong></div><button type="button" @click="sendProductQuestion(product.name)">了解详情 <span>↗</span></button></div></article></div></section>
       <section id="applications" class="application-section"><div class="section-wrap"><div class="section-heading light"><div><p class="eyebrow"><span></span> 机械零件应用</p><h2>围绕设备需求，<br><em>做好配套零件。</em></h2></div><p>面向各类机械设备的传动、支撑与结构部位，结合实际用途和工况匹配零件方案。</p></div><div class="application-grid"><article v-for="application in applications" :key="application.title"><span>{{ application.index }}</span><h3>{{ application.title }}</h3><p>{{ application.description }}</p><a href="#advisor">咨询方案 <span>→</span></a></article></div></div></section>
       <section id="service" class="service-section section-wrap"><div><p class="eyebrow"><span></span> 工厂服务</p><h2>从图纸到交付，<br><em>每一步都说清楚。</em></h2></div><div class="service-list"><div><strong>01</strong><span><b>图纸评估</b><small>确认材质、工艺、尺寸与公差</small></span></div><div><strong>02</strong><span><b>样品打样</b><small>先做样品，确认后再批量生产</small></span></div><div><strong>03</strong><span><b>批量交付</b><small>全检出货，按期稳定交付</small></span></div></div></section>
-      <section id="advisor" class="advisor-section section-wrap"><div class="advisor-intro"><p class="eyebrow"><span></span> 在线报价顾问</p><h2>有图纸或样品？<br><em>现在就问我们。</em></h2><p>告诉顾问设备用途、材质、数量和目标交期，也可以直接描述加工要求，我们会协助确认产品信息与报价方式。</p><div class="quick-questions"><button v-for="question in quickQuestions" :key="question" type="button" @click="send(question)">{{ question }}</button></div></div><div class="chat-panel"><div class="chat-panel-head"><span class="status-dot"></span><div><strong>XXX 机械零件顾问</strong><small>{{ loading ? '正在回复' : '在线 · 通常几秒内回复' }}</small></div><button class="clear-button" type="button" title="清空对话" @click="clearHistory">↺</button><span class="chat-label">MECHANICAL PARTS</span></div><div class="chat-content"><p v-if="!messages.length && !output" class="empty-state">您好，我可以为您查询机械零件信息、参考报价和定制流程。</p><ChatMessage v-for="(message, index) in visibleMessages" :key="index" :role="message.role" :content="message.content" /><ChatMessage v-if="output" role="assistant" :content="output" /><ToolStatus :visible="showToolPanel" :status="toolStatus" /></div><ChatInput :loading="loading" @send="send" @stop="stop" /></div></section>
+      <section id="advisor" class="advisor-section section-wrap"><div class="advisor-intro"><p class="eyebrow"><span></span> 在线报价顾问</p><h2>有图纸或样品？<br><em>现在就问我们。</em></h2><p>告诉顾问设备用途、材质、数量和目标交期，也可以直接描述加工要求，我们会协助确认产品信息与报价方式。</p><div class="quick-questions"><button v-for="question in quickQuestions" :key="question" type="button" @click="send(question)">{{ question }}</button></div></div><div class="chat-panel"><div class="chat-panel-head"><span class="status-dot"></span><div><strong>XXX 机械零件顾问</strong><small>{{ loading ? '正在回复' : '在线 · 通常几秒内回复' }}</small></div><button class="clear-button" type="button" title="清空对话" @click="clearHistory">↺</button><span class="chat-label">MECHANICAL PARTS</span></div><div ref="chatContent" class="chat-content"><p v-if="!messages.length && !output" class="empty-state">您好，我可以为您查询机械零件信息、参考报价和定制流程。</p><ChatMessage v-for="(message, index) in visibleMessages" :key="index" :role="message.role" :content="message.content" /><ChatMessage v-if="output" role="assistant" :content="output" /><ToolStatus :visible="showToolPanel" :status="toolStatus" /></div><ChatInput :loading="loading" @send="send" @stop="stop" /></div></section>
     </main>
     <footer><span>XXX MECHANICAL PARTS</span><span>机械零件配套与定制</span><span>© 2026 XXX</span></footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAgent } from './composables/useAgent'
 import ChatInput from './components/ChatInput.vue'
 import ChatMessage from './components/ChatMessage.vue'
 import ToolStatus from './components/ToolStatus.vue'
 
 const { messages, output, loading, toolStatus, showToolPanel, send, stop, clearHistory } = useAgent()
+// 绑定聊天滚动容器，刷新后可以定位到历史消息的末尾。
+const chatContent = ref<HTMLElement | null>(null)
 const visibleMessages = computed(() =>
   messages.value.filter((message) =>
     message.role !== 'tool' && !(message.role === 'assistant' && !message.content)
   )
 )
+// 等消息完成 DOM 渲染后再滚动，否则此时 scrollHeight 还没有更新。
+function scrollChatToBottom() {
+  nextTick(() => {
+    if (chatContent.value) chatContent.value.scrollTop = chatContent.value.scrollHeight
+  })
+}
+// 新消息或流式内容变化时保持显示最新内容；页面首次挂载时恢复历史位置。
+watch([() => messages.value.length, output], scrollChatToBottom)
+onMounted(scrollChatToBottom)
 const products = [
   { type: '传动部件', code: 'MECH-01', name: '传动轴及轴套', description: '用于机械传动与连接部位，具体结构、材质和尺寸根据设备用途及图纸确认。', price: '按图报价' },
   { type: '支撑部件', code: 'MECH-02', name: '轴承座', description: '用于轴承安装与支撑，需根据配套轴承、安装尺寸和工况确认加工要求。', price: '按图报价' },

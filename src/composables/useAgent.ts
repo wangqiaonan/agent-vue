@@ -3,6 +3,29 @@ import { z } from 'zod'
 import { getProductInfo, getPrice, getProcessInfo } from '../services/factory'
 import type { Message, ToolResult } from '../types'
 
+const REQUEST_TIMEOUT_MS = 30_000
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  onTimeout: () => void
+): Promise<Response> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      onTimeout()
+      reject(new Error('请求超时，请稍后重试'))
+    }, REQUEST_TIMEOUT_MS)
+  })
+
+  try {
+    // 请求和超时竞争，先完成的一方决定结果。
+    return await Promise.race([fetch(input, init), timeoutPromise])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 // localStorage 是外部可修改的数据，先校验再恢复为聊天消息。
 const storedMessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'tool', 'system']),
@@ -133,7 +156,7 @@ export function useAgent() {
     let preserveOutput = false
 
     try {
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
+      const response = await fetchWithTimeout('https://api.deepseek.com/chat/completions', {
         signal: requestController.signal,
         method: 'POST',
         headers: {
@@ -192,7 +215,7 @@ export function useAgent() {
           ],
           stream: true
         })
-      })
+      }, () => requestController.abort())
 
       assertResponseOk(response)
 
@@ -325,7 +348,7 @@ export function useAgent() {
   }
 
   async function followUp(signal: AbortSignal) {
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetchWithTimeout('https://api.deepseek.com/chat/completions', {
       signal,
       method: 'POST',
       headers: {
@@ -343,6 +366,8 @@ export function useAgent() {
         ],
         stream: true
       })
+    }, () => {
+      if (!signal.aborted) controller?.abort()
     })
 
     assertResponseOk(response)
