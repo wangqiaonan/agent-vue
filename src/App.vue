@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted } from 'vue'
 import { useAgent } from './composables/useAgent'
 import ChatInput from './components/ChatInput.vue'
 import ChatMessage from './components/ChatMessage.vue'
@@ -38,6 +38,9 @@ const products = [
 const applications = [{ index: '01', title: '传动与连接', description: '围绕传动轴、轴套及连接部位，按图纸和配合要求确认零件方案。' }, { index: '02', title: '支撑与安装', description: '针对轴承座等支撑部件，核对安装尺寸、配套关系与工况要求。' }, { index: '03', title: '设备结构件', description: '提供支架及连接件等机械结构零件的定制咨询。' }]
 const quickQuestions = ['传动轴和轴套怎么报价？', '轴承座能按样件加工吗？', '我有零件图纸，怎么询价？']
 function sendProductQuestion(productName: string) { window.location.hash = 'advisor'; send(`请介绍一下${productName}的用途、参数和价格。`) }
+onUnmounted(() => {
+  stop()  // 组件卸载时中断请求
+})
 </script>
 
 <style>
