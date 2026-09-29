@@ -1,6 +1,42 @@
 import { ref } from 'vue'
+import { z } from 'zod'
 import { getProductInfo, getPrice, getProcessInfo } from '../services/factory'
 import type { Message, ToolResult } from '../types'
+
+// localStorage 是外部可修改的数据，先校验再恢复为聊天消息。
+const storedMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'tool', 'system']),
+  content: z.string().nullable().optional(),
+  reasoning_content: z.string().optional(),
+  tool_calls: z.array(z.object({
+    id: z.string(),
+    type: z.literal('function'),
+    function: z.object({
+      name: z.string(),
+      arguments: z.string()
+    })
+  })).optional(),
+  tool_call_id: z.string().optional()
+})
+
+// 产品信息和报价工具必须收到非空的产品名称。
+const toolArgumentsSchema = z.object({
+  productName: z.string().trim().min(1)
+})
+
+// 流程工具没有参数，并拒绝模型额外传入未知字段。
+const emptyToolArgumentsSchema = z.object({}).strict()
+
+function loadChatHistory(): Message[] {
+  try {
+    const storedHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]')
+    const result = z.array(storedMessageSchema).safeParse(storedHistory)
+    // 历史记录损坏时从空会话开始，避免阻塞整个页面初始化。
+    return result.success ? result.data as Message[] : []
+  } catch {
+    return []
+  }
+}
 
 async function readSseStream(response: Response, onData: (data: string) => void) {
   if (!response.body) throw new Error('响应内容为空')
@@ -61,7 +97,7 @@ export function useAgent() {
       callback()
     })
   }
-  const messages = ref<Message[]>(JSON.parse(localStorage.getItem('chatHistory') || '[]'))
+  const messages = ref<Message[]>(loadChatHistory())
   const output = ref('')
   const loading = ref(false)
   const toolStatus = ref('')
@@ -212,17 +248,20 @@ export function useAgent() {
         for (const [id, entry] of toolCallsMap.entries()) {
           console.log(`工具 ${entry.name} 参数：`, entry.args)
 
-          let args: any = {}
+          let args: Record<string, string>
           try {
-            args = JSON.parse(entry.args)
-          } catch (e) {
-            try {
-              args = JSON.parse(entry.args + '}')
-            } catch (e2) {
-              console.error('工具参数解析失败：', entry.args)
-              toolStatus.value = `❌ 工具参数解析失败：${entry.args}`
-              continue
-            }
+            const parsedArgs: unknown = JSON.parse(entry.args)
+            // 不同工具的参数契约不同，流程工具使用空对象 schema。
+            const schema = entry.name === 'getProcessInfo'
+              ? emptyToolArgumentsSchema
+              : toolArgumentsSchema
+            const result = schema.safeParse(parsedArgs)
+            if (!result.success) throw new Error(result.error.issues[0]?.message || '缺少 productName')
+            args = result.data
+          } catch (error) {
+            console.error('工具参数校验失败：', error)
+            toolStatus.value = `❌ 工具参数校验失败：${entry.args}`
+            continue
           }
 
           let result = ''
