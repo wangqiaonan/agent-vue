@@ -112,6 +112,7 @@ function assertResponseOk(response: Response) {
 }
 
 export function useAgent() {
+  type AgentStatus = 'idle' | 'thinking' | 'tool_calling' | 'answering' | 'done'
   let rafId: number | null = null
   function scheduleUpdate(callback: () => void) {
     if (rafId !== null) return // 已经排了，不重复排
@@ -125,6 +126,7 @@ export function useAgent() {
   const loading = ref(false)
   const toolStatus = ref('')
   const showToolPanel = ref(false)
+  const agentStatus = ref<AgentStatus>('idle')
 
   let controller: AbortController | null = null
   let thinkingTimer: ReturnType<typeof setInterval> | null = null
@@ -139,6 +141,8 @@ export function useAgent() {
 
   async function send(userText: string) {
     if (!userText.trim() || loading.value) return
+    // 1. 用户发送后，进入 thinking
+    agentStatus.value = 'thinking'
 
     messages.value.push({ role: 'user', content: userText })
     localStorage.setItem('chatHistory', JSON.stringify(messages.value))
@@ -161,7 +165,7 @@ export function useAgent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer sk-99f281866a864050ba01aed8977d58cc'
+          'Authorization': 'Bearer key'
         },
         body: JSON.stringify({
           model: 'deepseek-flash',
@@ -233,6 +237,8 @@ export function useAgent() {
         if (delta?.reasoning_content) reasoningContent += delta.reasoning_content
 
         if (delta?.tool_calls) {
+          // 2. 收到 tool_calls 时，进入 tool_calling
+          agentStatus.value = 'tool_calling'
           for (const toolCall of delta.tool_calls) {
             const id = toolCall.id || lastToolCallId
             if (!id) continue
@@ -254,6 +260,8 @@ export function useAgent() {
 
         const content = delta?.content || ''
         if (content) {
+          // 3. 收到普通文本时，进入 answering
+          agentStatus.value = 'answering'
           if (isFirstContent) {
             clearThinkingTimer()
             output.value = ''
@@ -322,10 +330,12 @@ export function useAgent() {
         await followUp(requestController.signal)
       } else if (fullReply) {
         messages.value.push({ role: 'assistant', content: fullReply })
+        agentStatus.value = 'done'
       }
 
       localStorage.setItem('chatHistory', JSON.stringify(messages.value))
     } catch (error: any) {
+      agentStatus.value = 'idle'
       if (error.name === 'AbortError') {
         output.value = '已停止生成'
         preserveOutput = true
@@ -353,7 +363,7 @@ export function useAgent() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-99f281866a864050ba01aed8977d58cc'
+        'Authorization': 'Bearer key'
       },
       body: JSON.stringify({
         model: 'deepseek-flash',
@@ -389,12 +399,15 @@ export function useAgent() {
 
     messages.value.push({ role: 'assistant', content: fullReply })
     localStorage.setItem('chatHistory', JSON.stringify(messages.value))
+    // 4. followUp 完整收到最终回复后，才进入 done。
+    agentStatus.value = 'done'
   }
 
   function stop() {
     if (controller && !controller.signal.aborted) {
       controller.abort()
       clearThinkingTimer()
+      agentStatus.value = 'idle'
     }
   }
 
@@ -404,6 +417,7 @@ export function useAgent() {
     output.value = ''
     showToolPanel.value = false
     toolStatus.value = ''
+    agentStatus.value = 'idle'
   }
 
   return {
@@ -412,6 +426,7 @@ export function useAgent() {
     loading,
     toolStatus,
     showToolPanel,
+    agentStatus,
     send,
     stop,
     clearHistory
