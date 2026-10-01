@@ -1,61 +1,1078 @@
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#top"><span class="brand-mark">L</span><span>XXX <small>MECHANICAL PARTS</small></span></a>
-      <nav class="nav-links"><a href="#products">产品中心</a><a href="#applications">应用场景</a><a href="#service">服务支持</a></nav>
+      <a class="brand" href="#top"
+        ><span class="brand-mark">L</span
+        ><span>XXX <small>MECHANICAL PARTS</small></span></a
+      >
+      <nav class="nav-links">
+        <a href="#products">产品中心</a><a href="#applications">应用场景</a
+        ><a href="#service">服务支持</a>
+      </nav>
       <a class="header-cta" href="#advisor">获取报价 <span>↗</span></a>
     </header>
     <main id="top">
-      <section class="hero section-wrap"><div class="hero-copy"><p class="eyebrow"><span></span> 机械零件 · 按图定制</p><h1>为设备制造，<br><em>做好关键零件。</em></h1><p class="hero-intro">专注机械零件加工与配套，涵盖传动、支撑、连接及结构件等常见类别，支持来图来样定制及批量交付。</p><div class="hero-actions"><a class="primary-button" href="#products">查看产品方案 <span>↓</span></a><a class="text-button" href="#advisor">咨询产品顾问 <span>→</span></a></div><div class="trust-line"><strong>来图</strong> 定制加工 <i></i><strong>按需</strong> 打样交付 <i></i><strong>质检</strong> 出货检验</div></div><div class="hero-product"><div class="product-glow"></div><div class="device"><div class="device-top"><span>XXX</span><b>PART-01</b></div><div class="device-screen"><span>MECHANICAL PART</span><strong>按图定制</strong><i></i></div><div class="device-slots"><i v-for="slot in 6" :key="slot"></i></div><div class="device-base"></div></div><div class="floating-spec spec-one"><small>产品范围</small><strong>机械零件</strong></div><div class="floating-spec spec-two"><small>加工方式</small><strong>来图定制</strong></div><p class="product-caption">XXX · 机械零件</p></div></section>
-      <section class="metrics section-wrap"><div><strong>±0.01<span>mm</span></strong><small>常规加工精度</small></div><div><strong>48<span>h</span></strong><small>图纸评估报价</small></div><div><strong>7<span>天</span></strong><small>样品最快交期</small></div><div><strong>100<span>%</span></strong><small>出货检验覆盖</small></div></section>
-      <section id="products" class="content-section section-wrap"><div class="section-heading"><div><p class="eyebrow"><span></span> 机械零件产品</p><h2>适配工况的<br><em>可靠零件。</em></h2></div><p>展示常见机械零件类别，具体材质、尺寸与工艺以设备用途、图纸或样件确认结果为准。</p></div><div class="product-grid"><article v-for="(product, index) in products" :key="product.name" class="product-card" :class="{ featured: index === 0 }"><div class="card-top"><span class="product-type">{{ product.type }}</span><span>0{{ index + 1 }}</span></div><div class="mini-product" :class="`mini-product-${index + 1}`"><span>{{ product.code }}</span><i></i><i></i><i></i></div><h3>{{ product.name }}</h3><p>{{ product.description }}</p><div class="card-footer"><div><small>报价方式</small><strong>{{ product.price }}</strong></div><button type="button" @click="sendProductQuestion(product.name)">了解详情 <span>↗</span></button></div></article></div></section>
-      <section id="applications" class="application-section"><div class="section-wrap"><div class="section-heading light"><div><p class="eyebrow"><span></span> 机械零件应用</p><h2>围绕设备需求，<br><em>做好配套零件。</em></h2></div><p>面向各类机械设备的传动、支撑与结构部位，结合实际用途和工况匹配零件方案。</p></div><div class="application-grid"><article v-for="application in applications" :key="application.title"><span>{{ application.index }}</span><h3>{{ application.title }}</h3><p>{{ application.description }}</p><a href="#advisor">咨询方案 <span>→</span></a></article></div></div></section>
-      <section id="service" class="service-section section-wrap"><div><p class="eyebrow"><span></span> 工厂服务</p><h2>从图纸到交付，<br><em>每一步都说清楚。</em></h2></div><div class="service-list"><div><strong>01</strong><span><b>图纸评估</b><small>确认材质、工艺、尺寸与公差</small></span></div><div><strong>02</strong><span><b>样品打样</b><small>先做样品，确认后再批量生产</small></span></div><div><strong>03</strong><span><b>批量交付</b><small>全检出货，按期稳定交付</small></span></div></div></section>
-      <section id="advisor" class="advisor-section section-wrap"><div class="advisor-intro"><p class="eyebrow"><span></span> 在线报价顾问</p><h2>有图纸或样品？<br><em>现在就问我们。</em></h2><p>告诉顾问设备用途、材质、数量和目标交期，也可以直接描述加工要求，我们会协助确认产品信息与报价方式。</p><div class="quick-questions"><button v-for="question in quickQuestions" :key="question" type="button" @click="send(question)">{{ question }}</button></div></div><div class="chat-panel"><div class="chat-panel-head"><span class="status-dot"></span><div><strong>XXX 机械零件顾问</strong><small v-if="loading">正在回复</small><small v-else-if="agentStatus === 'thinking'">正在思考...</small><small v-else-if="agentStatus === 'tool_calling'">正在调用工具...</small><small v-else-if="agentStatus === 'answering'">正在回答...</small><small v-else-if="agentStatus === 'done'">已完成</small><small v-else>在线 · 通常几秒内回复</small></div><button class="clear-button" type="button" title="清空对话" @click="clearHistory">↺</button><span class="chat-label">MECHANICAL PARTS</span></div><div ref="chatContent" class="chat-content"><p v-if="!messages.length && !output" class="empty-state">您好，我可以为您查询机械零件信息、参考报价和定制流程。</p><ChatMessage v-for="(message, index) in visibleMessages" :key="index" :role="message.role" :content="message.content" /><ChatMessage v-if="output" role="assistant" :content="output" /><ToolStatus :visible="showToolPanel" :status="toolStatus" /></div><ChatInput :loading="loading" @send="send" @stop="stop" /></div></section>
+      <section class="hero section-wrap">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> 机械零件 · 按图定制</p>
+          <h1>为设备制造，<br /><em>做好关键零件。</em></h1>
+          <p class="hero-intro">
+            专注机械零件加工与配套，涵盖传动、支撑、连接及结构件等常见类别，支持来图来样定制及批量交付。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#products"
+              >查看产品方案 <span>↓</span></a
+            ><a class="text-button" href="#advisor"
+              >咨询产品顾问 <span>→</span></a
+            >
+          </div>
+          <div class="trust-line">
+            <strong>来图</strong> 定制加工 <i></i><strong>按需</strong> 打样交付
+            <i></i><strong>质检</strong> 出货检验
+          </div>
+        </div>
+        <div class="hero-product">
+          <div class="product-glow"></div>
+          <div class="device">
+            <div class="device-top"><span>XXX</span><b>PART-01</b></div>
+            <div class="device-screen">
+              <span>MECHANICAL PART</span><strong>按图定制</strong><i></i>
+            </div>
+            <div class="device-slots">
+              <i v-for="slot in 6" :key="slot"></i>
+            </div>
+            <div class="device-base"></div>
+          </div>
+          <div class="floating-spec spec-one">
+            <small>产品范围</small><strong>机械零件</strong>
+          </div>
+          <div class="floating-spec spec-two">
+            <small>加工方式</small><strong>来图定制</strong>
+          </div>
+          <p class="product-caption">XXX · 机械零件</p>
+        </div>
+      </section>
+      <section class="metrics section-wrap">
+        <div>
+          <strong>±0.01<span>mm</span></strong
+          ><small>常规加工精度</small>
+        </div>
+        <div>
+          <strong>48<span>h</span></strong
+          ><small>图纸评估报价</small>
+        </div>
+        <div>
+          <strong>7<span>天</span></strong
+          ><small>样品最快交期</small>
+        </div>
+        <div>
+          <strong>100<span>%</span></strong
+          ><small>出货检验覆盖</small>
+        </div>
+      </section>
+      <section id="products" class="content-section section-wrap">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow"><span></span> 机械零件产品</p>
+            <h2>适配工况的<br /><em>可靠零件。</em></h2>
+          </div>
+          <p>
+            展示常见机械零件类别，具体材质、尺寸与工艺以设备用途、图纸或样件确认结果为准。
+          </p>
+        </div>
+        <div class="product-grid">
+          <article
+            v-for="(product, index) in products"
+            :key="product.name"
+            class="product-card"
+            :class="{ featured: index === 0 }"
+          >
+            <div class="card-top">
+              <span class="product-type">{{ product.type }}</span
+              ><span>0{{ index + 1 }}</span>
+            </div>
+            <div class="mini-product" :class="`mini-product-${index + 1}`">
+              <span>{{ product.code }}</span
+              ><i></i><i></i><i></i>
+            </div>
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+            <div class="card-footer">
+              <div>
+                <small>报价方式</small><strong>{{ product.price }}</strong>
+              </div>
+              <button type="button" @click="sendProductQuestion(product.name)">
+                了解详情 <span>↗</span>
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section id="applications" class="application-section">
+        <div class="section-wrap">
+          <div class="section-heading light">
+            <div>
+              <p class="eyebrow"><span></span> 机械零件应用</p>
+              <h2>围绕设备需求，<br /><em>做好配套零件。</em></h2>
+            </div>
+            <p>
+              面向各类机械设备的传动、支撑与结构部位，结合实际用途和工况匹配零件方案。
+            </p>
+          </div>
+          <div class="application-grid">
+            <article
+              v-for="application in applications"
+              :key="application.title"
+            >
+              <span>{{ application.index }}</span>
+              <h3>{{ application.title }}</h3>
+              <p>{{ application.description }}</p>
+              <a href="#advisor">咨询方案 <span>→</span></a>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section id="service" class="service-section section-wrap">
+        <div>
+          <p class="eyebrow"><span></span> 工厂服务</p>
+          <h2>从图纸到交付，<br /><em>每一步都说清楚。</em></h2>
+        </div>
+        <div class="service-list">
+          <div>
+            <strong>01</strong
+            ><span
+              ><b>图纸评估</b><small>确认材质、工艺、尺寸与公差</small></span
+            >
+          </div>
+          <div>
+            <strong>02</strong
+            ><span
+              ><b>样品打样</b><small>先做样品，确认后再批量生产</small></span
+            >
+          </div>
+          <div>
+            <strong>03</strong
+            ><span><b>批量交付</b><small>全检出货，按期稳定交付</small></span>
+          </div>
+        </div>
+      </section>
+      <section id="advisor" class="advisor-section section-wrap">
+        <div class="advisor-intro">
+          <p class="eyebrow"><span></span> 在线报价顾问</p>
+          <h2>有图纸或样品？<br /><em>现在就问我们。</em></h2>
+          <p>
+            告诉顾问设备用途、材质、数量和目标交期，也可以直接描述加工要求，我们会协助确认产品信息与报价方式。
+          </p>
+          <div class="quick-questions">
+            <button
+              v-for="question in quickQuestions"
+              :key="question"
+              type="button"
+              @click="send(question)"
+            >
+              {{ question }}
+            </button>
+          </div>
+        </div>
+        <div class="chat-panel">
+          <div class="chat-panel-head">
+            <span class="status-dot"></span>
+            <div>
+              <strong>XXX 机械零件顾问</strong
+              ><small v-if="loading">正在回复</small
+              ><small v-else-if="agentStatus === 'thinking'">正在思考...</small
+              ><small v-else-if="agentStatus === 'tool_calling'"
+                >正在调用工具...</small
+              ><small v-else-if="agentStatus === 'answering'">正在回答...</small
+              ><small v-else-if="agentStatus === 'done'">已完成</small
+              ><small v-else>在线 · 通常几秒内回复</small>
+              <span class="token-count">已消耗 {{ totalTokens }} tokens</span>
+            </div>
+            <button
+              class="clear-button"
+              type="button"
+              title="清空对话"
+              @click="clearHistory"
+            >
+              ↺</button
+            ><span class="chat-label">MECHANICAL PARTS</span>
+          </div>
+          <div ref="chatContent" class="chat-content">
+            <p v-if="!messages.length && !output" class="empty-state">
+              您好，我可以为您查询机械零件信息、参考报价和定制流程。
+            </p>
+            <ChatMessage
+              v-for="(message, index) in visibleMessages"
+              :key="index"
+              :role="message.role"
+              :content="message.content"
+            /><ChatMessage
+              v-if="output"
+              role="assistant"
+              :content="output"
+            /><ToolStatus :visible="showToolPanel" :status="toolStatus" />
+            <details v-if="reasoning.trim()" class="reasoning-box">
+              <summary>查看分析过程</summary>
+              <pre>{{ reasoning }}</pre>
+            </details>
+            <div v-if="timeline.length" class="timeline">
+              <strong>⏱ 工具调用时间线</strong>
+              <div v-for="(item, i) in timeline" :key="i" class="timeline-item">
+                <span class="time">{{ item.time }}</span>
+                <span class="name">{{ item.name }}</span>
+                <span class="result">{{ item.result }}</span>
+              </div>
+            </div>
+          </div>
+          <ChatInput :loading="loading" @send="send" @stop="stop" />
+        </div>
+      </section>
     </main>
-    <footer><span>XXX MECHANICAL PARTS</span><span>机械零件配套与定制</span><span>© 2026 XXX</span></footer>
+    <footer>
+      <span>XXX MECHANICAL PARTS</span><span>机械零件配套与定制</span
+      ><span>© 2026 XXX</span>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useAgent } from './composables/useAgent'
-import ChatInput from './components/ChatInput.vue'
-import ChatMessage from './components/ChatMessage.vue'
-import ToolStatus from './components/ToolStatus.vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useAgent } from "./composables/useAgent";
+import ChatInput from "./components/ChatInput.vue";
+import ChatMessage from "./components/ChatMessage.vue";
+import ToolStatus from "./components/ToolStatus.vue";
 
-const { messages, output, loading, toolStatus, showToolPanel, agentStatus, send, stop, clearHistory } = useAgent()
+const {
+  messages,
+  output,
+  loading,
+  toolStatus,
+  showToolPanel,
+  agentStatus,
+  send,
+  stop,
+  clearHistory,
+  reasoning,
+  timeline,
+  totalTokens,
+} = useAgent();
 // 绑定聊天滚动容器，刷新后可以定位到历史消息的末尾。
-const chatContent = ref<HTMLElement | null>(null)
+const chatContent = ref<HTMLElement | null>(null);
 const visibleMessages = computed(() =>
-  messages.value.filter((message) =>
-    message.role !== 'tool' && !(message.role === 'assistant' && !message.content)
-  )
-)
+  messages.value.filter(
+    (message) =>
+      message.role !== "tool" &&
+      !(message.role === "assistant" && !message.content),
+  ),
+);
 // 等消息完成 DOM 渲染后再滚动，否则此时 scrollHeight 还没有更新。
 function scrollChatToBottom() {
   nextTick(() => {
-    if (chatContent.value) chatContent.value.scrollTop = chatContent.value.scrollHeight
-  })
+    if (chatContent.value)
+      chatContent.value.scrollTop = chatContent.value.scrollHeight;
+  });
 }
 // 新消息或流式内容变化时保持显示最新内容；页面首次挂载时恢复历史位置。
-watch([() => messages.value.length, output], scrollChatToBottom)
-onMounted(scrollChatToBottom)
+watch([() => messages.value.length, output], scrollChatToBottom);
+onMounted(scrollChatToBottom);
 const products = [
-  { type: '传动部件', code: 'MECH-01', name: '传动轴及轴套', description: '用于机械传动与连接部位，具体结构、材质和尺寸根据设备用途及图纸确认。', price: '按图报价' },
-  { type: '支撑部件', code: 'MECH-02', name: '轴承座', description: '用于轴承安装与支撑，需根据配套轴承、安装尺寸和工况确认加工要求。', price: '按图报价' },
-    { type: '结构部件', code: 'MECH-03', name: '支架及连接件', description: '适用于机械设备结构支撑与部件连接，规格和安装方式按图纸或样件确认。', price: '按图报价' }
-]
-const applications = [{ index: '01', title: '传动与连接', description: '围绕传动轴、轴套及连接部位，按图纸和配合要求确认零件方案。' }, { index: '02', title: '支撑与安装', description: '针对轴承座等支撑部件，核对安装尺寸、配套关系与工况要求。' }, { index: '03', title: '设备结构件', description: '提供支架及连接件等机械结构零件的定制咨询。' }]
-const quickQuestions = ['传动轴和轴套怎么报价？', '轴承座能按样件加工吗？', '我有零件图纸，怎么询价？']
-function sendProductQuestion(productName: string) { window.location.hash = 'advisor'; send(`请介绍一下${productName}的用途、参数和价格。`) }
+  {
+    type: "传动部件",
+    code: "MECH-01",
+    name: "传动轴及轴套",
+    description:
+      "用于机械传动与连接部位，具体结构、材质和尺寸根据设备用途及图纸确认。",
+    price: "按图报价",
+  },
+  {
+    type: "支撑部件",
+    code: "MECH-02",
+    name: "轴承座",
+    description:
+      "用于轴承安装与支撑，需根据配套轴承、安装尺寸和工况确认加工要求。",
+    price: "按图报价",
+  },
+  {
+    type: "结构部件",
+    code: "MECH-03",
+    name: "支架及连接件",
+    description:
+      "适用于机械设备结构支撑与部件连接，规格和安装方式按图纸或样件确认。",
+    price: "按图报价",
+  },
+];
+const applications = [
+  {
+    index: "01",
+    title: "传动与连接",
+    description: "围绕传动轴、轴套及连接部位，按图纸和配合要求确认零件方案。",
+  },
+  {
+    index: "02",
+    title: "支撑与安装",
+    description: "针对轴承座等支撑部件，核对安装尺寸、配套关系与工况要求。",
+  },
+  {
+    index: "03",
+    title: "设备结构件",
+    description: "提供支架及连接件等机械结构零件的定制咨询。",
+  },
+];
+const quickQuestions = [
+  "传动轴和轴套怎么报价？",
+  "轴承座能按样件加工吗？",
+  "我有零件图纸，怎么询价？",
+];
+function sendProductQuestion(productName: string) {
+  window.location.hash = "advisor";
+  send(`请介绍一下${productName}的用途、参数和价格。`);
+}
 onUnmounted(() => {
-  stop()  // 组件卸载时中断请求
-})
+  stop(); // 组件卸载时中断请求
+});
 </script>
 
 <style>
-:root { color-scheme:light; } body { margin:0; background:#f5f7f2; } #app { width:auto; max-width:none; min-height:100vh; margin:0; border:0; display:block; text-align:left; }
-.app-shell { --ink:#17211b; --muted:#6e776f; --line:#dfe5df; --paper:#f5f7f2; --green:#174d3b; --lime:#c8e86b; --orange:#f36b3f; min-height:100dvh; color:var(--ink); background:var(--paper); font-family:Georgia, 'Times New Roman', 'Noto Serif SC', serif; }.app-shell * { box-sizing:border-box; }.app-shell h1,.app-shell h2,.app-shell h3,.app-shell p { margin-top:0; }.topbar { height:76px; display:flex; align-items:center; justify-content:space-between; padding:0 max(28px,calc((100% - 1200px)/2)); border-bottom:1px solid var(--line); background:#f8faf6; }.brand { display:flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-weight:bold; font-size:18px; letter-spacing:.04em; }.brand small { display:block; margin-top:2px; color:var(--muted); font:600 8px/1 Arial,sans-serif; letter-spacing:.16em; }.brand-mark { display:grid; place-items:center; width:30px; height:30px; background:var(--green); color:var(--lime); font:700 20px Georgia,serif; }.nav-links { display:flex; gap:34px; margin-left:auto; margin-right:42px; font:600 13px Arial,sans-serif; }.nav-links a,.header-cta { color:var(--ink); text-decoration:none; }.header-cta { padding:11px 16px; color:#fff; background:var(--orange); font:700 12px Arial,sans-serif; }.section-wrap { width:min(1200px,calc(100% - 56px)); margin:0 auto; }.hero { min-height:560px; display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:40px; padding:42px 0 32px; }.eyebrow { display:flex; align-items:center; gap:9px; margin:0 0 18px; color:var(--orange); font:700 11px Arial,sans-serif; letter-spacing:.14em; }.eyebrow span { width:23px; height:2px; background:currentColor; }.hero h1 { margin-bottom:24px; font-size:clamp(42px,5vw,72px); line-height:1.07; letter-spacing:-.04em; font-weight:500; }.app-shell em { color:var(--green); font-style:normal; }.hero-intro { max-width:470px; margin-bottom:30px; color:var(--muted); font:15px/1.85 Arial,sans-serif; }.hero-actions { display:flex; gap:25px; align-items:center; margin-bottom:38px; }.primary-button { padding:15px 18px; background:var(--green); color:#fff; text-decoration:none; font:700 12px Arial,sans-serif; }.text-button { color:var(--ink); text-decoration:none; font:700 12px Arial,sans-serif; }.trust-line { display:flex; align-items:center; gap:9px; color:var(--muted); font:11px Arial,sans-serif; }.trust-line strong { color:var(--ink); font:700 18px Georgia,serif; }.trust-line i { width:1px; height:19px; margin:0 8px; background:var(--line); }.hero-product { position:relative; min-height:440px; display:grid; place-items:center; }.product-glow { position:absolute; width:350px; height:350px; border-radius:50%; background:#e4efc4; }.device { position:relative; z-index:1; width:min(285px,66%); height:250px; padding:22px 25px; transform:perspective(800px) rotateY(-16deg) rotateX(4deg) rotateZ(-2deg); background:#27312e; box-shadow:28px 30px 0 rgba(23,77,59,.12),0 35px 50px rgba(23,33,27,.2); }.device-top,.device-slots { display:flex; justify-content:space-between; color:#dce4d8; font:700 10px Arial,sans-serif; }.device-top b,.device-screen { color:var(--lime); }.device-screen { display:flex; flex-direction:column; justify-content:center; height:106px; margin:20px 0 17px; padding:15px; border:1px solid #52645a; background:#101b18; font:9px Arial,sans-serif; }.device-screen strong { margin-top:5px; font:30px Georgia,serif; }.device-screen i { width:72%; height:3px; margin-top:9px; background:var(--lime); }.device-slots i { width:23px; height:6px; background:#718077; }.device-base { position:absolute; right:-16px; bottom:-12px; left:-16px; height:12px; background:#18231f; }.floating-spec { position:absolute; z-index:2; display:flex; flex-direction:column; gap:5px; padding:12px 15px; background:#fff; box-shadow:0 12px 25px rgba(23,33,27,.08); font-family:Arial,sans-serif; }.floating-spec small,.product-caption { color:var(--muted); font-size:10px; }.floating-spec strong { color:var(--green); font:700 18px Georgia,serif; }.spec-one { top:72px; left:7%; }.spec-two { right:2%; bottom:90px; }.product-caption { position:absolute; bottom:22px; margin:0; letter-spacing:.1em; }.metrics { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }.metrics>div { display:flex; flex-direction:column; gap:5px; padding:25px 20px; border-right:1px solid var(--line); }.metrics>div:first-child { padding-left:0; }.metrics>div:last-child { border:0; }.metrics strong { color:var(--green); font:500 32px Georgia,serif; }.metrics strong span { font-size:15px; }.metrics small,.card-footer small { color:var(--muted); font:11px Arial,sans-serif; }.content-section { padding:110px 0 115px; }.section-heading { display:flex; align-items:end; justify-content:space-between; margin-bottom:45px; }.section-heading h2,.service-section h2,.advisor-intro h2 { margin:0; font-size:clamp(31px,4vw,49px); line-height:1.1; font-weight:500; letter-spacing:-.03em; }.section-heading>p { width:260px; margin:0 10% 3px 0; color:var(--muted); font:13px/1.7 Arial,sans-serif; }.product-grid,.application-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }.product-card { min-height:385px; display:flex; flex-direction:column; padding:23px; border:1px solid var(--line); background:#fff; }.product-card.featured { border-top:3px solid var(--orange); }.card-top,.card-footer { display:flex; justify-content:space-between; }.card-top { color:#a5afa7; font:12px Arial,sans-serif; }.product-type { color:var(--orange); font-weight:bold; }.mini-product { display:flex; align-items:end; gap:5px; height:125px; margin:20px 0; padding:14px; background:#edf2e9; color:var(--green); }.mini-product span { align-self:start; margin-right:auto; font:700 10px Arial,sans-serif; }.mini-product i { width:10px; height:42px; background:var(--green); }.mini-product-2 { background:#f5eadf; }.mini-product-2 i { height:23px; background:var(--orange); }.mini-product-3 { background:#e5edf0; }.mini-product-3 i { height:57px; background:#477789; }.product-card h3 { margin-bottom:10px; font:500 22px Georgia,serif; }.product-card>p { min-height:42px; color:var(--muted); font:12px/1.65 Arial,sans-serif; }.card-footer { align-items:end; margin-top:auto; }.card-footer strong { color:var(--green); font:600 19px Georgia,serif; }.card-footer button,.quick-questions button { padding:9px 11px; border:1px solid var(--line); border-radius:0; background:transparent; color:var(--ink); cursor:pointer; font:600 11px Arial,sans-serif; }.application-section { padding:105px 0 110px; background:var(--green); color:#f4f7ed; }.light .eyebrow,.light h2 em,.application-grid a { color:var(--lime); }.light>p,.application-grid p { color:#b5c9b7; }.application-grid { gap:1px; background:#416a59; }.application-grid article { min-height:220px; padding:25px; background:var(--green); }.application-grid span { color:var(--lime); font:11px Arial,sans-serif; }.application-grid h3 { margin:38px 0 12px; font:500 23px Georgia,serif; }.application-grid p { min-height:38px; font:12px/1.7 Arial,sans-serif; }.application-grid a { text-decoration:none; font:700 11px Arial,sans-serif; }.service-section { display:grid; grid-template-columns:1fr 1fr; gap:90px; padding:115px 0; }.service-list { border-top:1px solid var(--line); }.service-list>div { display:flex; align-items:center; gap:24px; padding:19px 0; border-bottom:1px solid var(--line); }.service-list strong { color:var(--orange); font:12px Arial,sans-serif; }.service-list span,.chat-panel-head>div { display:flex; flex-direction:column; gap:6px; }.service-list b { font:500 17px Georgia,serif; }.service-list small { color:var(--muted); font:11px Arial,sans-serif; }.advisor-section { display:grid; grid-template-columns:.8fr 1.2fr; gap:70px; align-items:center; padding:96px 0 105px; border-top:1px solid var(--line); }.advisor-intro>p:not(.eyebrow) { max-width:350px; margin:23px 0; color:var(--muted); font:13px/1.75 Arial,sans-serif; }.quick-questions { display:flex; flex-wrap:wrap; gap:7px; }.chat-panel { display:flex; flex-direction:column; min-height:390px; border:1px solid var(--line); background:#fff; box-shadow:0 18px 45px rgba(23,33,27,.08); }.chat-panel-head { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--line); }.chat-panel-head strong { font:600 13px Arial,sans-serif; }.chat-panel-head small,.chat-label { color:var(--muted); font:10px Arial,sans-serif; }.status-dot { width:8px; height:8px; border-radius:50%; background:#6ab85c; }.clear-button { margin-left:auto; border:0; background:transparent; color:var(--green); cursor:pointer; font-size:20px; }.chat-label { letter-spacing:.12em; }.chat-content { flex:1; min-height:240px; max-height:420px; overflow-y:auto; padding:18px; }.empty-state { color:var(--muted); font:12px/1.7 Arial,sans-serif; } footer { display:flex; justify-content:space-between; padding:24px max(28px,calc((100% - 1200px)/2)); border-top:1px solid var(--line); color:#849087; font:10px Arial,sans-serif; letter-spacing:.06em; }
-@media (max-width:800px) { .topbar { height:64px; padding:0 18px; }.nav-links { display:none; }.section-wrap { width:calc(100% - 36px); }.hero { display:flex; flex-direction:column; align-items:stretch; min-height:0; gap:12px; padding-top:58px; }.hero h1 { font-size:45px; }.hero-product { min-height:350px; }.metrics { grid-template-columns:repeat(2,1fr); }.metrics>div,.metrics>div:first-child { padding:18px 12px; }.metrics>div:nth-child(2) { border:0; }.content-section,.application-section,.service-section,.advisor-section { padding-top:70px; padding-bottom:70px; }.section-heading,.service-section,.advisor-section { display:flex; flex-direction:column; align-items:stretch; gap:28px; }.section-heading>p { width:auto; margin:0; }.product-grid,.application-grid { grid-template-columns:1fr; }.advisor-section { gap:40px; }.chat-label { display:none; } footer { flex-direction:column; gap:9px; padding:22px 18px; } }
+:root {
+  color-scheme: light;
+}
+body {
+  margin: 0;
+  background: #f5f7f2;
+}
+#app {
+  width: auto;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  border: 0;
+  display: block;
+  text-align: left;
+}
+.app-shell {
+  --ink: #17211b;
+  --muted: #6e776f;
+  --line: #dfe5df;
+  --paper: #f5f7f2;
+  --green: #174d3b;
+  --lime: #c8e86b;
+  --orange: #f36b3f;
+  min-height: 100dvh;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Georgia, "Times New Roman", "Noto Serif SC", serif;
+}
+.app-shell * {
+  box-sizing: border-box;
+}
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell p {
+  margin-top: 0;
+}
+.topbar {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(28px, calc((100% - 1200px) / 2));
+  border-bottom: 1px solid var(--line);
+  background: #f8faf6;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.brand small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font:
+    600 8px/1 Arial,
+    sans-serif;
+  letter-spacing: 0.16em;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: var(--green);
+  color: var(--lime);
+  font:
+    700 20px Georgia,
+    serif;
+}
+.nav-links {
+  display: flex;
+  gap: 34px;
+  margin-left: auto;
+  margin-right: 42px;
+  font:
+    600 13px Arial,
+    sans-serif;
+}
+.nav-links a,
+.header-cta {
+  color: var(--ink);
+  text-decoration: none;
+}
+.header-cta {
+  padding: 11px 16px;
+  color: #fff;
+  background: var(--orange);
+  font:
+    700 12px Arial,
+    sans-serif;
+}
+.section-wrap {
+  width: min(1200px, calc(100% - 56px));
+  margin: 0 auto;
+}
+.hero {
+  min-height: 560px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 40px;
+  padding: 42px 0 32px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 18px;
+  color: var(--orange);
+  font:
+    700 11px Arial,
+    sans-serif;
+  letter-spacing: 0.14em;
+}
+.eyebrow span {
+  width: 23px;
+  height: 2px;
+  background: currentColor;
+}
+.hero h1 {
+  margin-bottom: 24px;
+  font-size: clamp(42px, 5vw, 72px);
+  line-height: 1.07;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+}
+.app-shell em {
+  color: var(--green);
+  font-style: normal;
+}
+.hero-intro {
+  max-width: 470px;
+  margin-bottom: 30px;
+  color: var(--muted);
+  font:
+    15px/1.85 Arial,
+    sans-serif;
+}
+.hero-actions {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  margin-bottom: 38px;
+}
+.primary-button {
+  padding: 15px 18px;
+  background: var(--green);
+  color: #fff;
+  text-decoration: none;
+  font:
+    700 12px Arial,
+    sans-serif;
+}
+.text-button {
+  color: var(--ink);
+  text-decoration: none;
+  font:
+    700 12px Arial,
+    sans-serif;
+}
+.trust-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font:
+    11px Arial,
+    sans-serif;
+}
+.trust-line strong {
+  color: var(--ink);
+  font:
+    700 18px Georgia,
+    serif;
+}
+.trust-line i {
+  width: 1px;
+  height: 19px;
+  margin: 0 8px;
+  background: var(--line);
+}
+.hero-product {
+  position: relative;
+  min-height: 440px;
+  display: grid;
+  place-items: center;
+}
+.product-glow {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  background: #e4efc4;
+}
+.device {
+  position: relative;
+  z-index: 1;
+  width: min(285px, 66%);
+  height: 250px;
+  padding: 22px 25px;
+  transform: perspective(800px) rotateY(-16deg) rotateX(4deg) rotateZ(-2deg);
+  background: #27312e;
+  box-shadow:
+    28px 30px 0 rgba(23, 77, 59, 0.12),
+    0 35px 50px rgba(23, 33, 27, 0.2);
+}
+.device-top,
+.device-slots {
+  display: flex;
+  justify-content: space-between;
+  color: #dce4d8;
+  font:
+    700 10px Arial,
+    sans-serif;
+}
+.device-top b,
+.device-screen {
+  color: var(--lime);
+}
+.device-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 106px;
+  margin: 20px 0 17px;
+  padding: 15px;
+  border: 1px solid #52645a;
+  background: #101b18;
+  font:
+    9px Arial,
+    sans-serif;
+}
+.device-screen strong {
+  margin-top: 5px;
+  font:
+    30px Georgia,
+    serif;
+}
+.device-screen i {
+  width: 72%;
+  height: 3px;
+  margin-top: 9px;
+  background: var(--lime);
+}
+.device-slots i {
+  width: 23px;
+  height: 6px;
+  background: #718077;
+}
+.device-base {
+  position: absolute;
+  right: -16px;
+  bottom: -12px;
+  left: -16px;
+  height: 12px;
+  background: #18231f;
+}
+.floating-spec {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 15px;
+  background: #fff;
+  box-shadow: 0 12px 25px rgba(23, 33, 27, 0.08);
+  font-family: Arial, sans-serif;
+}
+.floating-spec small,
+.product-caption {
+  color: var(--muted);
+  font-size: 10px;
+}
+.floating-spec strong {
+  color: var(--green);
+  font:
+    700 18px Georgia,
+    serif;
+}
+.spec-one {
+  top: 72px;
+  left: 7%;
+}
+.spec-two {
+  right: 2%;
+  bottom: 90px;
+}
+.product-caption {
+  position: absolute;
+  bottom: 22px;
+  margin: 0;
+  letter-spacing: 0.1em;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 25px 20px;
+  border-right: 1px solid var(--line);
+}
+.metrics > div:first-child {
+  padding-left: 0;
+}
+.metrics > div:last-child {
+  border: 0;
+}
+.metrics strong {
+  color: var(--green);
+  font:
+    500 32px Georgia,
+    serif;
+}
+.metrics strong span {
+  font-size: 15px;
+}
+.metrics small,
+.card-footer small {
+  color: var(--muted);
+  font:
+    11px Arial,
+    sans-serif;
+}
+.content-section {
+  padding: 110px 0 115px;
+}
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 45px;
+}
+.section-heading h2,
+.service-section h2,
+.advisor-intro h2 {
+  margin: 0;
+  font-size: clamp(31px, 4vw, 49px);
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.section-heading > p {
+  width: 260px;
+  margin: 0 10% 3px 0;
+  color: var(--muted);
+  font:
+    13px/1.7 Arial,
+    sans-serif;
+}
+.product-grid,
+.application-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.product-card {
+  min-height: 385px;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.product-card.featured {
+  border-top: 3px solid var(--orange);
+}
+.card-top,
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+}
+.card-top {
+  color: #a5afa7;
+  font:
+    12px Arial,
+    sans-serif;
+}
+.product-type {
+  color: var(--orange);
+  font-weight: bold;
+}
+.mini-product {
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  height: 125px;
+  margin: 20px 0;
+  padding: 14px;
+  background: #edf2e9;
+  color: var(--green);
+}
+.mini-product span {
+  align-self: start;
+  margin-right: auto;
+  font:
+    700 10px Arial,
+    sans-serif;
+}
+.mini-product i {
+  width: 10px;
+  height: 42px;
+  background: var(--green);
+}
+.mini-product-2 {
+  background: #f5eadf;
+}
+.mini-product-2 i {
+  height: 23px;
+  background: var(--orange);
+}
+.mini-product-3 {
+  background: #e5edf0;
+}
+.mini-product-3 i {
+  height: 57px;
+  background: #477789;
+}
+.product-card h3 {
+  margin-bottom: 10px;
+  font:
+    500 22px Georgia,
+    serif;
+}
+.product-card > p {
+  min-height: 42px;
+  color: var(--muted);
+  font:
+    12px/1.65 Arial,
+    sans-serif;
+}
+.card-footer {
+  align-items: end;
+  margin-top: auto;
+}
+.card-footer strong {
+  color: var(--green);
+  font:
+    600 19px Georgia,
+    serif;
+}
+.card-footer button,
+.quick-questions button {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font:
+    600 11px Arial,
+    sans-serif;
+}
+.application-section {
+  padding: 105px 0 110px;
+  background: var(--green);
+  color: #f4f7ed;
+}
+.light .eyebrow,
+.light h2 em,
+.application-grid a {
+  color: var(--lime);
+}
+.light > p,
+.application-grid p {
+  color: #b5c9b7;
+}
+.application-grid {
+  gap: 1px;
+  background: #416a59;
+}
+.application-grid article {
+  min-height: 220px;
+  padding: 25px;
+  background: var(--green);
+}
+.application-grid span {
+  color: var(--lime);
+  font:
+    11px Arial,
+    sans-serif;
+}
+.application-grid h3 {
+  margin: 38px 0 12px;
+  font:
+    500 23px Georgia,
+    serif;
+}
+.application-grid p {
+  min-height: 38px;
+  font:
+    12px/1.7 Arial,
+    sans-serif;
+}
+.application-grid a {
+  text-decoration: none;
+  font:
+    700 11px Arial,
+    sans-serif;
+}
+.service-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 90px;
+  padding: 115px 0;
+}
+.service-list {
+  border-top: 1px solid var(--line);
+}
+.service-list > div {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 19px 0;
+  border-bottom: 1px solid var(--line);
+}
+.service-list strong {
+  color: var(--orange);
+  font:
+    12px Arial,
+    sans-serif;
+}
+.service-list span,
+.chat-panel-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.service-list b {
+  font:
+    500 17px Georgia,
+    serif;
+}
+.service-list small {
+  color: var(--muted);
+  font:
+    11px Arial,
+    sans-serif;
+}
+.advisor-section {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 70px;
+  align-items: center;
+  padding: 96px 0 105px;
+  border-top: 1px solid var(--line);
+}
+.advisor-intro > p:not(.eyebrow) {
+  max-width: 350px;
+  margin: 23px 0;
+  color: var(--muted);
+  font:
+    13px/1.75 Arial,
+    sans-serif;
+}
+.quick-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 390px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(23, 33, 27, 0.08);
+}
+.chat-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.chat-panel-head strong {
+  font:
+    600 13px Arial,
+    sans-serif;
+}
+.chat-panel-head small,
+.chat-label {
+  color: var(--muted);
+  font:
+    10px Arial,
+    sans-serif;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6ab85c;
+}
+.clear-button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 20px;
+}
+.chat-label {
+  letter-spacing: 0.12em;
+}
+.chat-content {
+  flex: 1;
+  min-height: 240px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 18px;
+}
+.empty-state {
+  color: var(--muted);
+  font:
+    12px/1.7 Arial,
+    sans-serif;
+}
+footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px max(28px, calc((100% - 1200px) / 2));
+  border-top: 1px solid var(--line);
+  color: #849087;
+  font:
+    10px Arial,
+    sans-serif;
+  letter-spacing: 0.06em;
+}
+@media (max-width: 800px) {
+  .topbar {
+    height: 64px;
+    padding: 0 18px;
+  }
+  .nav-links {
+    display: none;
+  }
+  .section-wrap {
+    width: calc(100% - 36px);
+  }
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    gap: 12px;
+    padding-top: 58px;
+  }
+  .hero h1 {
+    font-size: 45px;
+  }
+  .hero-product {
+    min-height: 350px;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .metrics > div,
+  .metrics > div:first-child {
+    padding: 18px 12px;
+  }
+  .metrics > div:nth-child(2) {
+    border: 0;
+  }
+  .content-section,
+  .application-section,
+  .service-section,
+  .advisor-section {
+    padding-top: 70px;
+    padding-bottom: 70px;
+  }
+  .section-heading,
+  .service-section,
+  .advisor-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 28px;
+  }
+  .section-heading > p {
+    width: auto;
+    margin: 0;
+  }
+  .product-grid,
+  .application-grid {
+    grid-template-columns: 1fr;
+  }
+  .advisor-section {
+    gap: 40px;
+  }
+  .chat-label {
+    display: none;
+  }
+  footer {
+    flex-direction: column;
+    gap: 9px;
+    padding: 22px 18px;
+  }
+}
+.reasoning-box {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f9f9f9;
+  border-left: 3px solid #ccc;
+  font-size: 12px;
+}
+.reasoning-box pre {
+  white-space: pre-wrap;
+  margin: 8px 0 0;
+}
+.timeline {
+  margin-top: 12px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #eee;
+  font-size: 12px;
+}
+.timeline-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #eee;
+}
+.time { color: #999; }
+.name { color: #1677ff; font-weight: bold; }
+.result { color: #333; }
+.token-count {
+  font-size: 11px;
+  color: #999;
+  margin-left: 12px;
+}
 </style>

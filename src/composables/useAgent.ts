@@ -3,6 +3,13 @@ import { z } from 'zod'
 import { getProductInfo, getPrice, getProcessInfo } from '../services/factory'
 import type { Message, ToolResult } from '../types'
 
+interface ToolTimelineItem {
+  name: string   // 工具名
+  args: string   // 参数
+  result: string // 结果
+  time: string   // 调用时间
+}
+
 const REQUEST_TIMEOUT_MS = 30_000
 
 async function fetchWithTimeout(
@@ -49,6 +56,7 @@ const toolArgumentsSchema = z.object({
 
 // 流程工具没有参数，并拒绝模型额外传入未知字段。
 const emptyToolArgumentsSchema = z.object({}).strict()
+const reasoning = ref('')
 
 function loadChatHistory(): Message[] {
   try {
@@ -111,7 +119,10 @@ function assertResponseOk(response: Response) {
   throw new Error(`请求失败：${response.status}`)
 }
 
+
 export function useAgent() {
+  const timeline = ref<ToolTimelineItem[]>([])
+  const totalTokens = ref(0)
   type AgentStatus = 'idle' | 'thinking' | 'tool_calling' | 'answering' | 'done'
   let rafId: number | null = null
   function scheduleUpdate(callback: () => void) {
@@ -143,6 +154,7 @@ export function useAgent() {
     if (!userText.trim() || loading.value) return
     // 1. 用户发送后，进入 thinking
     agentStatus.value = 'thinking'
+    reasoning.value = ''
 
     messages.value.push({ role: 'user', content: userText })
     localStorage.setItem('chatHistory', JSON.stringify(messages.value))
@@ -160,19 +172,18 @@ export function useAgent() {
     let preserveOutput = false
 
     try {
-      const response = await fetchWithTimeout('https://api.deepseek.com/chat/completions', {
+      const response = await fetchWithTimeout('/api/chat', {
         signal: requestController.signal,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer key'
         },
         body: JSON.stringify({
           model: 'deepseek-flash',
           messages: [
             {
               role: 'system',
-              content: '你是机械零件产品顾问，回答机械零件、适配信息、定制流程和报价相关问题。产品参数和价格以工具返回内容为准；缺少设备用途、图纸或样件时，明确说明需要补充信息，不要编造规格、材质、精度或价格。'
+              content: '你是机械零件产品顾问，回答机械零件、适配信息、定制流程和报价相关问题。产品参数和价格以工具返回内容为准；缺少设备用途、图纸或样件时，明确说明需要补充信息，不要编造规格、材质、精度或价格。请始终使用中文进行思考和回答'
             },
             ...messages.value
           ],
@@ -217,7 +228,8 @@ export function useAgent() {
               }
             }
           ],
-          stream: true
+          stream: true,
+          stream_options: { include_usage: true }
         })
       }, () => requestController.abort())
 
@@ -225,6 +237,7 @@ export function useAgent() {
 
       let fullReply = ''
       let reasoningContent = ''
+      let firstRequestTokens = 0
       let isFirstContent = true
       const toolCallsMap = new Map<string, { name: string; args: string }>()
       let lastToolCallId = ''
@@ -233,9 +246,14 @@ export function useAgent() {
         if (dataStr === '[DONE]') return
         const json = JSON.parse(dataStr)
         if (json.error) throw new Error(json.error.message || '模型请求失败')
+        const reportedTokens = json.usage?.total_tokens
+        if (typeof reportedTokens === 'number' && reportedTokens >= firstRequestTokens) {
+          totalTokens.value += reportedTokens - firstRequestTokens
+          firstRequestTokens = reportedTokens
+        }
         const delta = json.choices?.[0]?.delta
         if (delta?.reasoning_content) reasoningContent += delta.reasoning_content
-
+        if (delta?.reasoning_content) reasoning.value += delta.reasoning_content
         if (delta?.tool_calls) {
           // 2. 收到 tool_calls 时，进入 tool_calling
           agentStatus.value = 'tool_calling'
@@ -324,6 +342,12 @@ export function useAgent() {
             content: result
           }
           messages.value.push({ role: 'tool', ...toolResult })
+          timeline.value.push({
+            name: entry.name,
+            args: JSON.stringify(args),
+            result,
+            time: new Date().toLocaleTimeString()
+          })
         }
 
         // 工具结果需要再请求模型组织答案，继续沿用首轮的取消信号。
@@ -358,23 +382,23 @@ export function useAgent() {
   }
 
   async function followUp(signal: AbortSignal) {
-    const response = await fetchWithTimeout('https://api.deepseek.com/chat/completions', {
+    const response = await fetchWithTimeout('/api/chat', {
       signal,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer key'
       },
       body: JSON.stringify({
         model: 'deepseek-flash',
         messages: [
           {
             role: 'system',
-            content: '你是机械零件产品顾问，回答机械零件、适配信息、定制流程和报价相关问题。产品参数和价格以工具返回内容为准；缺少设备用途、图纸或样件时，明确说明需要补充信息，不要编造规格、材质、精度或价格。'
+            content: '你是机械零件产品顾问，回答机械零件、适配信息、定制流程和报价相关问题。产品参数和价格以工具返回内容为准；缺少设备用途、图纸或样件时，明确说明需要补充信息，不要编造规格、材质、精度或价格。请始终使用中文进行思考和回答'
           },
           ...messages.value
         ],
-        stream: true
+        stream: true,
+        stream_options: { include_usage: true }
       })
     }, () => {
       if (!signal.aborted) controller?.abort()
@@ -383,11 +407,17 @@ export function useAgent() {
     assertResponseOk(response)
 
     let fullReply = ''
+    let followUpTokens = 0
 
     await readSseStream(response, (dataStr) => {
       if (dataStr === '[DONE]') return
       const json = JSON.parse(dataStr)
       if (json.error) throw new Error(json.error.message || '模型请求失败')
+      const reportedTokens = json.usage?.total_tokens
+      if (typeof reportedTokens === 'number' && reportedTokens >= followUpTokens) {
+        totalTokens.value += reportedTokens - followUpTokens
+        followUpTokens = reportedTokens
+      }
       const content = json.choices?.[0]?.delta?.content || ''
       if (content) {
         scheduleUpdate(() => {
@@ -415,6 +445,7 @@ export function useAgent() {
     messages.value = []
     localStorage.removeItem('chatHistory')
     output.value = ''
+    reasoning.value = ''
     showToolPanel.value = false
     toolStatus.value = ''
     agentStatus.value = 'idle'
@@ -429,6 +460,9 @@ export function useAgent() {
     agentStatus,
     send,
     stop,
-    clearHistory
+    clearHistory,
+    reasoning,
+    timeline,
+    totalTokens,
   }
 }

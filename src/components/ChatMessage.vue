@@ -1,5 +1,5 @@
 <template>
-  <div class="message" :class="role">
+  <div v-if="renderedContent.trim()" class="message" :class="role">
     <div class="bubble" v-html="renderedContent"></div>
   </div>
 </template>
@@ -16,7 +16,11 @@ const props = defineProps<{
 
 const renderedContent = computed(() => {
   if (!props.content) return ''
-  const rawHtml = marked.parse(props.content) as string
+  // 模型可能把思维过程包成 details，渲染前移除，避免出现多余的“展开”尾巴。
+  const content = props.role === 'assistant'
+    ? props.content.replace(/<details[\s\S]*?<\/details>/gi, '')
+    : props.content
+  const rawHtml = marked.parse(content) as string
   return DOMPurify.sanitize(rawHtml)
 })
 </script>
