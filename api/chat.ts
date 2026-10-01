@@ -1,4 +1,10 @@
 // api/chat.ts
+declare const process: {
+  env: {
+    DEEPSEEK_API_KEY?: string
+  }
+}
+
 export const config = {
   runtime: 'edge'  // 用 Edge Runtime，支持流式响应
 }

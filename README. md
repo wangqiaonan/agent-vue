@@ -1,15 +1,18 @@
-# 机械零件 · AI 产品顾问
+# XXX 机械零件 · AI 导购助手
 
-机械零件产品展示与 AI 报价顾问。用户可以咨询轴类、轴套、轴承座、支架及连接件等常见机械零件，了解定制流程和询价所需信息。零件参数与价格需根据设备用途、图纸或样件确认，顾问不会预设具体规格或报价。
+给精密机械零件加工厂做的官网，集成了 AI 导购助手。用户用自然语言问产品参数、价格、加工流程，Agent 自动调用工具回答，支持流式输出和多轮对话。
 
 ## 在线预览
 
-[点击这里](https://你的vercel链接)
+[点击这里体验](https://factory-ai-advisor.vercel.app)
+
+> 注意：Vercel 默认域名在国内部分网络环境下可能无法直接访问，如遇到请尝试切换网络，或本地运行 `pnpm dev`。
 
 ## 项目截图
 
 ![对话界面](./docs/chat.png)
 ![工具调用面板](./docs/tool-panel.png)
+![思维链与时间线](./docs/reasoning.png)
 
 ## 技术栈
 
@@ -19,15 +22,22 @@
 - Agent Loop（工具结果回传模型）
 - AbortController（中断生成）
 - localStorage（对话持久化）
+- marked + DOMPurify（Markdown 渲染 + XSS 防护）
+- highlight.js（代码块高亮）
+- Vercel Serverless Function（后端代理，保护 API Key）
 
 ## 核心功能
 
-- 流式对话：模型回答逐字渲染
-- 多轮对话：维护上下文，刷新不丢历史
-- 工具调用：定义 getProductInfo / getPrice / getProcessInfo 三个工具
-- 工具调用可视化：实时显示 Agent 正在调用的工具、参数和结果
-- 中断生成：用 AbortController 打断流式输出
-- 错误分类兜底：网络错误、API 错误、解析错误、中断错误分开提示
+- **流式对话**：模型回答逐字渲染，用 `requestAnimationFrame` 节流优化性能
+- **多轮对话**：维护 `messages` 历史，用 `localStorage` 持久化，刷新不丢
+- **工具调用**：定义 `getProductInfo` / `getPrice` / `getProcessInfo` 三个工具，模型自主决定调用
+- **Agent Loop**：工具执行结果按 API 规范回传模型，模型基于结果生成最终回答
+- **工具调用可视化**：实时显示正在调用的工具、参数、结果
+- **思维链可视化**：折叠展示模型的推理过程（`reasoning_content`）
+- **工具调用时间线**：按时间顺序记录每次工具调用的时间、名称、结果
+- **Token 消耗统计**：累加每次请求的 `usage.total_tokens`
+- **中断生成**：用 `AbortController` 打断流式输出
+- **错误分类兜底**：网络错误、API 错误、解析错误、中断错误分开提示
 
 ## 核心难点
 
@@ -35,15 +45,14 @@
 
 - 用 `fetch` + `stream: true` 接收大模型的流式响应
 - 通过 `ReadableStream` + `TextDecoder` 逐段解析
-- 处理中文截断（一个汉字的字节可能分到两个 chunk）
-- 处理粘包（多个 `data:` 包可能粘在一起）
+- 用 `buffer` 缓存不完整行，按 `\n` 切分，处理粘包
+- `decoder.decode(value, { stream: !done })` 处理跨字节块的 UTF-8 中文截断
 
 ### 2. Tool Calling 参数碎片缓冲
 
 - 流式返回的 `tool_calls` 参数是**分片传输**的，不能实时 `JSON.parse`
-- 用 `Map` 按 `tool_call_id` 收集参数碎片
+- 用 `Map` 按 `tool_call_id` 收集参数碎片，避免同一份参数被重复拼接
 - 等整个流结束后，再统一 `JSON.parse` 并执行工具
-- 解决「同一份参数被重复拼接」导致的 JSON 解析失败
 
 ### 3. Agent Loop（工具结果回传）
 
@@ -51,13 +60,18 @@
   - `assistant` 角色，`content: null`，带 `tool_calls` 记录调用请求和 id
   - `tool` 角色，带 `tool_call_id` 和工具执行结果
 - 再发一次请求，让模型基于工具结果生成自然语言回答
-- 前后两次请求构成完整的 Agent Loop
 
-### 4. 流式渲染的交互优化
+### 4. `reasoning_content` 的坑
 
-- 首字延迟用动态省略号动画缓解用户焦虑
-- 收到第一个 token 后清除动画、清空占位
-- 用 `AbortController` 支持用户中断生成
+- `deepseek-flash` 是带思考模式的模型，流式返回里除了 `content`，还有 `reasoning_content`
+- API 规范要求下一轮请求必须把上一轮的 `reasoning_content` 原样传回，否则报 400
+- 在 `AssistantMessage` 类型里加 `reasoning_content?: string` 字段，每轮收集并回传
+
+### 5. 后端代理保护 API Key
+
+- 开发初期 API Key 直接写在前端，push 到 GitHub 后被爬虫扫描盗用
+- 改为后端代理：前端请求 `/api/chat`，Vercel Serverless Function 带 Key 请求 DeepSeek
+- Key 存在 Vercel 环境变量 `DEEPSEEK_API_KEY` 里，前端完全看不到
 
 ## 本地运行
 
@@ -65,7 +79,11 @@
 
 ```bash
 # 安装依赖
-npm install
+pnpm install
+
+# 配置本地环境变量
+# 在项目根目录建 .env.local，内容：
+# VITE_DEEPSEEK_API_KEY=sk-你的Key
 
 # 启动开发服务器
-npm run dev
+pnpm dev
